@@ -522,8 +522,17 @@ def main():
     # Predict
     if training_args.do_predict:
         logger.info("*** Predict ***")
-
-        predictions, labels, metrics = trainer.predict(predict_dataset, metric_key_prefix="predict")
+        if training_args.resume_from_checkpoint is not None:
+            checkpoint = training_args.resume_from_checkpoint
+            model = AutoModelForTokenClassification.from_pretrained(checkpoint)
+            trainer = Trainer(
+                model=model,
+                compute_metrics=compute_metrics,
+            )
+            predictions, labels, metrics = trainer.predict(predict_dataset, metric_key_prefix="predict")
+        else:
+            predictions, labels, metrics = trainer.predict(predict_dataset, metric_key_prefix="predict")
+            
         predictions = np.argmax(predictions, axis=2)
 
         # Remove ignored index (special tokens)
