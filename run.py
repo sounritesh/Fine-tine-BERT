@@ -338,14 +338,19 @@ def main():
             use_auth_token=True if model_args.use_auth_token else None,
         )
 
-    model = AutoModelForTokenClassification.from_pretrained(
-        model_args.model_name_or_path,
-        from_tf=bool(".ckpt" in model_args.model_name_or_path),
-        config=config,
-        cache_dir=model_args.cache_dir,
-        revision=model_args.model_revision,
-        use_auth_token=True if model_args.use_auth_token else None,
-    )
+    if training_args.resume_from_checkpoint is not None:
+        model = AutoModelForTokenClassification.from_pretrained(
+            training_args.resume_from_checkpoint,
+        )
+    else:
+        model = AutoModelForTokenClassification.from_pretrained(
+            model_args.model_name_or_path,
+            from_tf=bool(".ckpt" in model_args.model_name_or_path),
+            config=config,
+            cache_dir=model_args.cache_dir,
+            revision=model_args.model_revision,
+            use_auth_token=True if model_args.use_auth_token else None,
+        )
 
     # Tokenizer check: this script requires a fast tokenizer.
     if not isinstance(tokenizer, PreTrainedTokenizerFast):
@@ -490,10 +495,10 @@ def main():
     # Training
     if training_args.do_train:
         checkpoint = None
-        if training_args.resume_from_checkpoint is not None:
-            checkpoint = training_args.resume_from_checkpoint
-        elif last_checkpoint is not None:
-            checkpoint = last_checkpoint
+        # if training_args.resume_from_checkpoint is not None:
+        #     checkpoint = training_args.resume_from_checkpoint
+        # elif last_checkpoint is not None:
+            # checkpoint = last_checkpoint
         train_result = trainer.train(resume_from_checkpoint=checkpoint)
         metrics = train_result.metrics
         trainer.save_model()  # Saves the tokenizer too for easy upload
@@ -532,7 +537,7 @@ def main():
             predictions, labels, metrics = trainer.predict(predict_dataset, metric_key_prefix="predict")
         else:
             predictions, labels, metrics = trainer.predict(predict_dataset, metric_key_prefix="predict")
-            
+
         predictions = np.argmax(predictions, axis=2)
 
         # Remove ignored index (special tokens)
